@@ -30,9 +30,16 @@ Contato **NA**: relé sem comando = circuito aberto. Ajuste a regra
 ```bash
 docker compose up -d                 # Mosquitto + LNbits
 cd backend && npm install
-npm run dev      # dashboard: http://localhost:8000 · console: "dev01 200" / "extrato"
-python3 tools/simulador.py           # desenvolve sem hardware
+npm run dev                          # dashboard em http://localhost:8000 (tempo real via WebSocket)
+npm run sim                          # simulador de medidores (sem hardware) — em outro terminal
+# alternativa em Python:  python3 tools/simulador.py   (pip install paho-mqtt)
 ```
+
+O dashboard (layout **1b "Pitch hero"**) mostra: o gráfico do pitch com sliders
+ao vivo (projeção), os 4 KPIs, as duas séries no tempo e o extrato — estes três
+últimos alimentados em **tempo real** pelas leituras que chegam do ESP32/simulador
+via MQTT. API: `GET /api/metrics`, `GET /api/projection`, `GET /api/state`,
+`POST /api/recarga {casaId,sats}`; stream ao vivo em `ws://localhost:8000/ws`.
 
 Firmware: escolha o modo no topo de `firmware/medidor/src/main.cpp`
 (`MEDICAO_INA219` já é o padrão, com fallback automático se o sensor faltar),
