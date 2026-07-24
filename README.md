@@ -89,6 +89,29 @@ copie `include/config.h.example` para `include/config.h`, ajuste Wi-Fi/broker e
 - **Extrato**: histórico auditável de débitos/créditos/cortes (`extrato` no console)
 
 
+## Deploy (Vercel + Railway)
+
+O dashboard só depende do backend via **WebSocket** — dá pra separar:
+
+**Backend → Railway** (processo persistente: MQTT + WebSocket):
+1. Novo projeto no Railway a partir do repo, **Root Directory = `backend`**.
+2. Start automático (`npm start`). O Railway injeta `PORT` (o backend já lê).
+3. Variáveis de ambiente (mesmas do `backend/.env.example`): `MQTT_URL`, `MQTT_TLS`,
+   `MQTT_USERNAME`, `MQTT_PASSWORD`, `TOPIC_LEITURAS`, `TOPIC_COMANDOS`,
+   `TOPIC_RECARGA`, `DEVICE_ID`, `SATS_POR_MWH`, etc.
+4. Anote a URL pública → WebSocket em `wss://…up.railway.app/ws`.
+   > `ledger.json` é efêmero no Railway (reseta a cada deploy). Para persistir,
+   > use um volume ou banco.
+
+**Frontend → Vercel** (estático):
+1. Importe o repo, **Root Directory = `frontend`** (preset Vite; usa `vercel.json`).
+2. Env var **`VITE_WS_URL`** = URL do backend Railway
+   (ex.: `wss://satsmeter-backend.up.railway.app` — o `/ws` entra sozinho).
+3. Deploy. O build sai em `dist/` (o `vite.config` detecta `VERCEL`).
+
+Local não muda: sem `VITE_WS_URL`, o front usa a mesma origem do backend.
+
+
 ## Licença
 
 MIT — open-source.

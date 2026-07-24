@@ -8,6 +8,19 @@ const VAZIO: MetricasReais = {
 
 export type ConnStatus = 'conectando' | 'online' | 'offline';
 
+// URL do WebSocket: usa VITE_WS_URL (deploy no Vercel apontando pro backend Railway),
+// senão same-origin (backend serve o front localmente / via proxy do Vite em dev).
+function resolveWsUrl(): string {
+  const env = import.meta.env.VITE_WS_URL;
+  if (env) {
+    let u = env.replace(/^http/, 'ws'); // https:// -> wss://  ·  http:// -> ws://
+    if (!/\/ws$/.test(u)) u = u.replace(/\/+$/, '') + '/ws';
+    return u;
+  }
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${proto}://${location.host}/ws`;
+}
+
 /** Assina o stream de métricas reais (WebSocket /ws) com reconexão automática. */
 export function useLiveMetrics() {
   const [metrics, setMetrics] = useState<MetricasReais>(VAZIO);
@@ -19,8 +32,7 @@ export function useLiveMetrics() {
     let timer: ReturnType<typeof setTimeout>;
 
     function conectar() {
-      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-      const ws = new WebSocket(`${proto}://${location.host}/ws`);
+      const ws = new WebSocket(resolveWsUrl());
       wsRef.current = ws;
 
       ws.onopen = () => vivo && setStatus('online');

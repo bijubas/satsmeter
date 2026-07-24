@@ -7,7 +7,9 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   build: {
-    outDir: '../backend/public',
+    // No Vercel (VERCEL=1) builda para dist/; localmente, para backend/public
+    // (o Express serve o front no mesmo processo).
+    outDir: process.env.VERCEL ? 'dist' : '../backend/public',
     emptyOutDir: true,
   },
   server: {
