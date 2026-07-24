@@ -1,10 +1,15 @@
-/** Leitura publicada pelo ESP32 (ou simulador) via MQTT. */
-export interface Reading {
-  casaId: string;
-  watts: number;   // potência instantânea (W)
-  wh: number;      // energia incremental desde a última publicação (Wh)
-  ts: number;      // epoch ms
-  tag: string;     // chave de idempotência (monotônica por dispositivo)
+/**
+ * Leitura publicada pelo firmware do ESP32 em `satsmeter/leituras`.
+ * energia_kwh é ACUMULADA desde o boot; o backend calcula o delta.
+ * casaId é opcional (o firmware single-device não envia) — cai no DEVICE_ID.
+ */
+export interface Leitura {
+  casaId?: string;
+  data_hora?: string;
+  tensao_v: number;
+  corrente_a: number;
+  energia_kwh: number;
+  ts?: number;
 }
 
 export type EventoTipo = 'Liquidação' | 'Corte' | 'Religa';
@@ -31,6 +36,7 @@ export interface CasaEstado {
   satsPagos: number;       // sats já transferidos ao produtor
   whPendente: number;      // energia acumulada aguardando fechar a próxima microliquidação
   satsPendente: number;    // sats correspondentes ao whPendente
+  ultimoKwhAcum: number;   // baseline: energia_kwh acumulada da última leitura (p/ delta)
 }
 
 /** Ponto de série temporal (uma amostra por bucket). */

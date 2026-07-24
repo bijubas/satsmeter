@@ -64,6 +64,7 @@ export class Ledger {
         satsPagos: 0,
         whPendente: 0,
         satsPendente: 0,
+        ultimoKwhAcum: NaN, // NaN = ainda sem baseline (primeira leitura só calibra)
       };
       this.data.casas[casaId] = c;
     }

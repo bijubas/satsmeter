@@ -16,16 +16,27 @@ const str = (key: string, def: string): string => {
   return raw === undefined ? def : String(raw).split('#')[0].trim();
 };
 
+const mqttHost = str('MQTT_HOST', 'localhost');
+const mqttPort = num('MQTT_PORT', 1883);
+const mqttTls = str('MQTT_TLS', 'false') === 'true';
+// MQTT_URL tem prioridade; senão monta a partir de host/port (mqtts:// se TLS).
+const mqttUrl =
+  str('MQTT_URL', '') || `${mqttTls ? 'mqtts' : 'mqtt'}://${mqttHost}:${mqttPort}`;
+
 export const config = {
   // --- HTTP / WebSocket ---
   port: num('PORT', 8000),
 
-  // --- MQTT ---
-  mqttHost: str('MQTT_HOST', 'localhost'),
-  mqttPort: num('MQTT_PORT', 1883),
-  topicReadingWildcard: 'satsmeter/+/reading',
-  topicRecargaWildcard: 'satsmeter/+/recarga',
-  topicRele: (casaId: string) => `satsmeter/${casaId}/rele`,
+  // --- MQTT (Mosquitto local OU HiveMQ Cloud, conforme o firmware) ---
+  mqttUrl,
+  mqttUsername: str('MQTT_USERNAME', ''),
+  mqttPassword: str('MQTT_PASSWORD', ''),
+  // Contrato do firmware do medidor:
+  topicLeituras: str('TOPIC_LEITURAS', 'satsmeter/leituras'),   // ESP32 publica aqui
+  topicComandos: str('TOPIC_COMANDOS', 'satsmeter/comandos'),   // backend publica 1/0 (relé)
+  topicRecarga: str('TOPIC_RECARGA', 'satsmeter/recarga'),      // recarga de saldo (demo)
+  // Payload do firmware não traz id; usa este quando o casaId vier ausente.
+  deviceId: str('DEVICE_ID', 'device-01'),
 
   // --- Regras de negócio (README) ---
   satsPorMwh: num('SATS_POR_MWH', 0.5),   // tarifa: sats por mWh consumido
