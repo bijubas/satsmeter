@@ -19,3 +19,7 @@ lnbits_data/
 .DS_Store
 Thumbs.db
 lnbits.env
+
+# segredos do firmware (branch firmware) — nunca versionar
+include/config.h
+src/config.h
