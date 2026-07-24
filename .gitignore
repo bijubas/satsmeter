@@ -4,6 +4,10 @@ backend/ledger.json
 python/ledger.json
 backend/node_modules/
 backend/dist/
+# build do frontend (gerado por: cd frontend && npm run build)
+backend/public/
+frontend/node_modules/
+frontend/dist/
 *.log
 __pycache__/
 *.pyc

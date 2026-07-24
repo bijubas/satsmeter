@@ -29,20 +29,26 @@ Contato **NA**: relé sem comando = circuito aberto. Ajuste a regra
 
 ```bash
 docker compose up -d                 # Mosquitto + LNbits
-cd backend && npm install
-npm run dev                          # backend + dashboard em http://localhost:8000 (tempo real via WebSocket)
+
+# 1) Frontend (React) — gera backend/public/ (servido pelo Express)
+cd frontend && npm install && npm run build
+
+# 2) Backend + dashboard em http://localhost:8000 (tempo real via WebSocket)
+cd ../backend && npm install
+npm run dev
 npm run sim                          # simulador de medidores (sem hardware) — em outro terminal
 # alternativa em Python:  python3 tools/simulador.py   (pip install paho-mqtt)
 ```
 
 **Frontend (React + TypeScript)** — o código-fonte fica em `frontend/` (Vite) e é
-**buildado para `backend/public/`**, servido pelo próprio Express (por isso `npm run
-dev` do backend já entrega a UI em :8000). Para desenvolver a UI:
+**buildado para `backend/public/`** (fora do git), servido pelo próprio Express — por
+isso o `npm run build` acima é necessário antes do backend entregar a UI em :8000.
+Para desenvolver a UI com hot-reload:
 
 ```bash
-cd frontend && npm install
+cd frontend
 npm run dev      # Vite com HMR em http://localhost:5173 (proxy de /api e /ws p/ o backend :8000)
-npm run build    # regenera backend/public/ (rode após editar a UI)
+npm run build    # regenera backend/public/ quando quiser servir pelo backend (:8000)
 ```
 
 O dashboard (layout **1b "Pitch hero"**) mostra: o gráfico do pitch com sliders
