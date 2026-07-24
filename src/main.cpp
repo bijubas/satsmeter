@@ -4,15 +4,7 @@
 #include <time.h>
 #include <Wire.h>
 #include <Adafruit_INA219.h>
-
-const char* WIFI_SSID = "REDACTED_SSID";
-const char* WIFI_PASSWORD = "REDACTED";
-
-const char* MQTT_HOST = "ac70a5c501fd400da48ea4a2abde61d0.s1.eu.hivemq.cloud";
-const int MQTT_PORT = 8883;
-const char* MQTT_USER = "esp32-satsmeter";
-const char* MQTT_PASSWORD = "REDACTED";
-const char* MQTT_CLIENT_ID = "satsmeter-device-01";
+#include "config.h"   // credenciais/conexão (gitignored) — copie de config.h.example
 
 const char* TOPIC_PUBLISH = "satsmeter/leituras";
 const char* TOPIC_SUBSCRIBE = "satsmeter/comandos";

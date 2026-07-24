@@ -4,7 +4,9 @@
 .vscode/launch.json
 .vscode/ipch
 .env
-firmware/medidor/src/config.h
+# segredos do firmware (copie de include/config.h.example)
+include/config.h
+src/config.h
 backend/ledger.json
 python/ledger.json
 backend/node_modules/
