@@ -57,9 +57,25 @@ ao vivo (projeção), os 4 KPIs, as duas séries no tempo e o extrato — estes 
 via MQTT. API: `GET /api/metrics`, `GET /api/projection`, `GET /api/state`,
 `POST /api/recarga {casaId,sats}`; stream ao vivo em `ws://localhost:8000/ws`.
 
-Firmware: escolha o modo no topo de `firmware/medidor/src/main.cpp`
-(`MEDICAO_INA219` já é o padrão, com fallback automático se o sensor faltar),
-configure Wi-Fi e IP do broker, e `pio run -t upload -t monitor`.
+
+## Integração firmware ↔ backend (MQTT)
+
+O backend fala o **contrato do firmware** (ESP32, na branch `firmware`):
+
+- **Broker**: configurável no `.env` — Mosquitto local (dev) ou **HiveMQ Cloud**
+  (`MQTT_URL=mqtts://…:8883` + `MQTT_TLS/USERNAME/PASSWORD`), o mesmo do firmware.
+- **Leituras** — o firmware publica em `satsmeter/leituras`:
+  `{ data_hora, tensao_v, corrente_a, energia_kwh }` (energia **acumulada**; casaId
+  opcional — sem ele, usa `DEVICE_ID`). O backend calcula o **delta** de energia,
+  converte em sats e dispara as microliquidações.
+- **Comandos de relé** — o backend publica em `satsmeter/comandos`: `1` liga
+  (religa) / `0` corta. O firmware assina esse tópico.
+- **Recarga** (demo) — `satsmeter/recarga` com `{casaId, sats}` ou o `POST /api/recarga`.
+
+Sem hardware, o simulador (`npm run sim` ou `tools/simulador.py`) publica nesse
+mesmo formato. O firmware fica na branch **firmware** (projeto PlatformIO na raiz):
+copie `include/config.h.example` para `include/config.h`, ajuste Wi-Fi/broker e
+`pio run -t upload -t monitor`.
 
 
 ## Regras de negócio
