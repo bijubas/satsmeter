@@ -4,7 +4,8 @@ services:
     ports:
       - "1883:1883"
     volumes:
-      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/conf:/mosquitto/config
+      - mosquitto_data:/mosquitto/data
     restart: unless-stopped
 
 
@@ -22,3 +23,4 @@ services:
 
 volumes:
   lnbits_data:
+  mosquitto_data:

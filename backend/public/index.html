@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SatsMeter · Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="page">
+    <div class="sm-shell" id="shell">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">₿</span>
+          <span class="brand-name">SatsMeter</span>
+          <span class="brand-sub">Cobrança automática de energia em Lightning</span>
+        </div>
+        <span class="live-badge" id="liveBadge">
+          <span class="dot dot-green"></span><span id="liqPorMin">0</span>&nbsp;liquidações/min
+        </span>
+      </header>
+
+      <!-- Hero: comparativo + KPIs -->
+      <section class="hero">
+        <div id="compare"><!-- SM-Compare --></div>
+        <div class="kpi-col" id="kpis"><!-- 4x SM-Kpi --></div>
+      </section>
+
+      <!-- Faixa inferior: 2 séries + extrato -->
+      <section class="bottom">
+        <div id="lineKwh"><!-- SM-Line consumo --></div>
+        <div id="lineSats"><!-- SM-Line sats --></div>
+        <div id="extrato"><!-- SM-Extrato --></div>
+      </section>
+    </div>
+    <p class="conn-note" id="connNote">conectando ao backend…</p>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

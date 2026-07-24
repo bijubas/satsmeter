@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="background:#ffffff;border:1px solid rgba(20,20,20,.08);border-radius:16px;padding:22px 24px 24px;display:flex;flex-direction:column;gap:20px;box-shadow:0 1px 3px rgba(20,20,20,.04)">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font:600 10.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#f7931a">O gráfico do pitch</span>
+      <span style="font:600 20px/1.15 'Space Grotesk',sans-serif;color:#17150f;letter-spacing:-.01em">Custo de processar o volume: boleto × PSP × Lightning</span>
+    </div>
+    <span style="font:500 12px/1.4 'IBM Plex Sans',sans-serif;color:#6b675e;text-align:right;max-width:230px">{{ volumeLabel }}</span>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:16px 24px;padding:16px 18px;background:#faf9f6;border:1px solid rgba(20,20,20,.06);border-radius:12px">
+    <sc-for list="{{ sliders }}" as="s" hint-placeholder-count="5">
+      <label style="display:flex;flex-direction:column;gap:8px;min-width:150px;flex:1">
+        <span style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+          <span style="font:600 10.5px/1 'IBM Plex Sans',sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#8a857a">{{ s.label }}</span>
+          <span style="font:600 12.5px/1 'IBM Plex Mono',monospace;color:#17150f">{{ s.display }}</span>
+        </span>
+        <input type="range" min="{{ s.min }}" max="{{ s.max }}" step="{{ s.step }}" value="{{ s.value }}" onChange="{{ s.onInput }}" style="width:100%;accent-color:#f7931a;cursor:pointer" />
+      </label>
+    </sc-for>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:18px">
+    <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+          <span style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+            <span style="font:600 15px/1 'Space Grotesk',sans-serif;color:#17150f">{{ r.name }}</span>
+            <span style="font:400 11.5px/1 'IBM Plex Mono',monospace;color:#9a958a">{{ r.desc }}</span>
+          </span>
+          <span style="font:600 20px/1 'Space Grotesk',sans-serif;color:{{ r.amountColor }};font-variant-numeric:tabular-nums;letter-spacing:-.01em">{{ r.amount }}</span>
+        </div>
+        <div style="height:24px;background:#f1efe9;border-radius:8px;overflow:hidden">
+          <div style="height:100%;width:{{ r.pct }}%;background:{{ r.color }};border-radius:8px;transition:width .28s cubic-bezier(.4,0,.2,1);min-width:3px"></div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(90deg,rgba(247,147,26,.10),rgba(247,147,26,.03));border:1px solid rgba(247,147,26,.28);border-radius:12px">
+    <span style="font:600 22px/1 'Space Grotesk',sans-serif;color:#d97a06;font-variant-numeric:tabular-nums;flex:none">{{ econPct }}</span>
+    <span style="font:500 13px/1.4 'IBM Plex Sans',sans-serif;color:#5c4a28">{{ econLabel }}</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:720,&quot;height&quot;:540},&quot;volumeLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;sliders&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Array&lt;{label:string;display:string;min:number;max:number;step:number;value:number;onInput:Function}&gt;&quot;},&quot;rows&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;Array&lt;{name:string;desc:string;amount:string;amountColor:string;pct:number;color:string}&gt;&quot;},&quot;econPct&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;99,9%&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;econLabel&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;&quot;,&quot;tsType&quot;:&quot;string&quot;}}"></script>
+</body>
+</html>

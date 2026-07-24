@@ -2,7 +2,9 @@
   "name": "backend",
   "version": "1.0.0",
   "scripts": {
-        "dev": "tsx src/main.ts"
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "sim": "tsx src/simulador.ts"
   },
   "keywords": [],
   "author": "",
@@ -11,11 +13,13 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "mqtt": "^5.15.2"
+    "mqtt": "^5.15.2",
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.1",
+    "@types/ws": "^8.5.12",
     "tsx": "^4.23.0",
     "typescript": "^7.0.2"
   }
