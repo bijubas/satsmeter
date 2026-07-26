@@ -10,9 +10,10 @@ type OnEvento = (ev: Evento) => void;
  * Núcleo de negócio do SatsMeter (regras do README):
  *  - recebe energia ACUMULADA do firmware, calcula o delta e dispara
  *    microliquidações Lightning;
- *  - histerese: corta só após CARENCIA_LEITURAS leituras sem saldo consecutivas;
+ *  - histerese: corta só após CARENCIA_LEITURAS pagamentos RECUSADOS consecutivos;
  *  - anti-flapping: religa só com saldo >= SALDO_MINIMO_RELIGA;
- *  - fail-safe: silêncio do medidor nunca corta — só saldo insuficiente confirmado;
+ *  - fail-safe: nem o silêncio do medidor nem o LNbits fora do ar cortam —
+ *    só recusa explícita do Lightning (HTTP 4xx) conta como inadimplência;
  *  - idempotência: tag (casa|data_hora) repetida devolve o ACK anterior sem cobrar.
  */
 export class Meter {
@@ -67,39 +68,66 @@ export class Meter {
   private async _cobrar(c: CasaEstado, wh: number, tag: string) {
     const custo = satsForWh(wh);
 
-    if (c.saldoSats >= custo) {
-      // consumidor com saldo: debita e credita o produtor
-      c.saldoSats -= custo;
-      c.whAcumulado += wh;
-      c.satsPagos += custo;
-      c.semSaldoConsecutivo = 0;
-      c.whPendente += wh;
-      c.satsPendente += custo;
+    // Sem crédito para pagar: é uma tentativa de pagamento inválida, e entra na
+    // MESMA contagem da recusa do LNbits (ver loop abaixo). Corta na CARENCIA_LEITURAS.
+    if (c.saldoSats < custo) {
+      c.semSaldoConsecutivo += 1;
+      c.falhasPagamento += 1;
+      console.warn(
+        `[meter] pagamento inválido (${c.casaId}) ${c.falhasPagamento}/${config.carenciaLeituras}: ` +
+          `saldo ${c.saldoSats.toFixed(0)} < custo ${custo.toFixed(0)} sats`,
+      );
+      if (c.releLigado && c.falhasPagamento >= config.carenciaLeituras) {
+        c.releLigado = false;
+        this.enviarRele(c.casaId, false);
+        this.onEvento(this.ledger.registrarEvento(c.casaId, 'Corte', 0, 0));
+      }
+      return;
+    }
 
-      // religa automático se estava cortado e voltou a ter saldo mínimo
+    // consumidor com saldo: debita e credita o produtor
+    c.saldoSats -= custo;
+    c.whAcumulado += wh;
+    c.satsPagos += custo;
+    c.semSaldoConsecutivo = 0;
+    c.whPendente += wh;
+    c.satsPendente += custo;
+
+    // fecha microliquidações a cada WH_POR_LIQ consumidos
+    while (c.whPendente >= config.whPorLiq) {
+      const whChunk = config.whPorLiq;
+      const satsChunk = Math.max(1, Math.round(satsForWh(whChunk)));
+      const res = await pagarProdutor(satsChunk, `SatsMeter ${c.casaId} ${whChunk}Wh`);
+
+      if (!res.ok) {
+        // Pagamento recusado: estorna o chunk (não houve liquidação), conta a
+        // falha e corta após CARENCIA_LEITURAS recusas consecutivas. A energia
+        // segue pendente e será retentada na próxima leitura.
+        c.saldoSats += satsChunk;
+        c.satsPagos = Math.max(0, c.satsPagos - satsChunk);
+        c.falhasPagamento += 1;
+        console.warn(
+          `[meter] pagamento inválido (${c.casaId}) ${c.falhasPagamento}/${config.carenciaLeituras}: ${res.motivo ?? 'recusado'}`,
+        );
+        if (c.releLigado && c.falhasPagamento >= config.carenciaLeituras) {
+          c.releLigado = false;
+          this.enviarRele(c.casaId, false);
+          this.onEvento(this.ledger.registrarEvento(c.casaId, 'Corte', 0, 0));
+        }
+        break; // não insiste nos demais chunks desta leitura
+      }
+
+      c.falhasPagamento = 0;
+      const ev = this.ledger.registrarEvento(c.casaId, 'Liquidação', whChunk, satsChunk, tag);
+      c.whPendente -= whChunk;
+      c.satsPendente = Math.max(0, c.satsPendente - satsChunk);
+      this.onEvento(ev);
+
+      // religa: pagamento voltou a ser aceito e há saldo mínimo (anti-flapping)
       if (!c.releLigado && c.saldoSats >= config.saldoMinimoReliga) {
         c.releLigado = true;
         this.enviarRele(c.casaId, true);
         this.onEvento(this.ledger.registrarEvento(c.casaId, 'Religa', 0, 0));
-      }
-
-      // fecha microliquidações a cada WH_POR_LIQ consumidos
-      while (c.whPendente >= config.whPorLiq) {
-        const whChunk = config.whPorLiq;
-        const satsChunk = Math.max(1, Math.round(satsForWh(whChunk)));
-        await pagarProdutor(satsChunk, `SatsMeter ${c.casaId} ${whChunk}Wh`);
-        const ev = this.ledger.registrarEvento(c.casaId, 'Liquidação', whChunk, satsChunk, tag);
-        c.whPendente -= whChunk;
-        c.satsPendente = Math.max(0, c.satsPendente - satsChunk);
-        this.onEvento(ev);
-      }
-    } else {
-      // sem saldo suficiente: histerese antes de cortar
-      c.semSaldoConsecutivo += 1;
-      if (c.releLigado && c.semSaldoConsecutivo >= config.carenciaLeituras) {
-        c.releLigado = false;
-        this.enviarRele(c.casaId, false);
-        this.onEvento(this.ledger.registrarEvento(c.casaId, 'Corte', 0, 0));
       }
     }
   }
@@ -108,6 +136,7 @@ export class Meter {
   recarregar(casaId: string, sats: number): void {
     const c = this.ledger.casa(casaId);
     c.saldoSats += Math.max(0, Math.round(sats));
+    c.falhasPagamento = 0; // recarga dá crédito novo: zera as recusas anteriores
     if (!c.releLigado && c.saldoSats >= config.saldoMinimoReliga) {
       c.releLigado = true;
       this.enviarRele(casaId, true);

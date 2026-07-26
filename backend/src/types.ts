@@ -31,6 +31,7 @@ export interface CasaEstado {
   saldoSats: number;
   releLigado: boolean;
   semSaldoConsecutivo: number;
+  falhasPagamento: number; // pagamentos recusados consecutivos (gatilho do corte)
   ultimaLeitura: number;   // ts
   whAcumulado: number;     // energia total acumulada (Wh)
   satsPagos: number;       // sats já transferidos ao produtor
