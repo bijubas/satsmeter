@@ -10,3 +10,14 @@ export const fmtSatsC = (n: number) => {
 };
 export const fmtHora = (ts: number) =>
   new Date(ts).toLocaleTimeString('pt-BR', { hour12: false });
+
+/**
+ * Energia com unidade adaptativa. O consumo real do medidor fica na casa dos
+ * mWh: exibir "0,00 kWh" esconderia o dado, então cai para Wh quando pequeno.
+ */
+export const fmtEnergia = (kwh: number): { valor: string; unidade: string } => {
+  const wh = kwh * 1000;
+  if (Math.abs(wh) < 10) return { valor: nf(wh < 1 ? 3 : 2).format(wh), unidade: 'Wh' };
+  if (kwh >= 100) return { valor: fmtInt(kwh), unidade: 'kWh' };
+  return { valor: nf(2).format(kwh), unidade: 'kWh' };
+};

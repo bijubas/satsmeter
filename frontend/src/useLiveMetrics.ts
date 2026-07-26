@@ -21,6 +21,40 @@ function resolveWsUrl(): string {
   return `${proto}://${location.host}/ws`;
 }
 
+/** Base HTTP da API: mesma origem em dev (proxy do Vite) ou o backend do VITE_WS_URL. */
+function resolveApiBase(): string {
+  const env = import.meta.env.VITE_WS_URL;
+  if (!env) return ''; // same-origin: o proxy do Vite (dev) ou o Express (:8000) resolvem
+  return env.replace(/^ws/, 'http').replace(/\/ws$/, '').replace(/\/+$/, '');
+}
+
+export interface Regras {
+  satsPorMwh: number;
+  carenciaLeituras: number;
+  saldoMinimoReliga: number;
+  whPorLiq: number;
+}
+
+const REGRAS_PADRAO: Regras = {
+  satsPorMwh: 0, carenciaLeituras: 3, saldoMinimoReliga: 0, whPorLiq: 0,
+};
+
+/** Lê as regras de negócio vigentes no backend (/api/state) uma vez, no mount. */
+export function useRegras(): Regras {
+  const [regras, setRegras] = useState<Regras>(REGRAS_PADRAO);
+
+  useEffect(() => {
+    let vivo = true;
+    fetch(`${resolveApiBase()}/api/state`)
+      .then((r) => r.json())
+      .then((j) => { if (vivo && j?.regras) setRegras(j.regras as Regras); })
+      .catch(() => { /* mantém o padrão */ });
+    return () => { vivo = false; };
+  }, []);
+
+  return regras;
+}
+
 /** Assina o stream de métricas reais (WebSocket /ws) com reconexão automática. */
 export function useLiveMetrics() {
   const [metrics, setMetrics] = useState<MetricasReais>(VAZIO);
