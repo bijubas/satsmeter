@@ -3,6 +3,7 @@ import { Ledger } from './ledger';
 import { Meter } from './meter';
 import { iniciarMqtt, enviarRele } from './mqtt';
 import { criarServidor } from './server';
+import { atualizarSaldosLightning } from './lightning';
 import type { MqttClient } from 'mqtt';
 
 /**
@@ -47,6 +48,11 @@ servidor.ouvir();
 
 // tick periódico: mantém "liquidações/min", casas ativas e séries frescas no front
 setInterval(() => servidor.broadcast(), 1000);
+
+// saldos do LNbits: relidos a cada 3s (o broadcast de 1s só reempacota o snapshot,
+// para não bater no LNbits a cada push)
+atualizarSaldosLightning();
+setInterval(() => atualizarSaldosLightning(), 3000);
 
 console.log(`[satsmeter] tarifa=${config.satsPorMwh} sats/mWh · carência=${config.carenciaLeituras} · religa≥${config.saldoMinimoReliga} sats · ${config.whPorLiq} Wh/liquidação`);
 console.log(`[satsmeter] Lightning: ${config.lnbitsUrl ? config.lnbitsUrl : 'modo simulado'}`);
