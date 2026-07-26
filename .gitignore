@@ -26,3 +26,7 @@ lnbits_data/
 .DS_Store
 Thumbs.db
 lnbits.env
+
+# backups locais (ledger e banco do LNbits) — nao versionar
+backups/
+backend/ledger.backup-*.json
