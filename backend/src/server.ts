@@ -6,6 +6,7 @@ import { config } from './config';
 import { Ledger } from './ledger';
 import { Meter } from './meter';
 import { projetar, DEFAULT_ASSUMPTIONS, Assumptions } from './projection';
+import { saldosLightning } from './lightning';
 
 export interface Servidor {
   broadcast: () => void;
@@ -21,9 +22,12 @@ export function criarServidor(
   app.use(express.json());
   app.use(express.static(path.resolve(__dirname, '..', 'public')));
 
+  /** Payload do painel: métricas do ledger + saldos das carteiras Lightning. */
+  const payload = () => ({ ...ledger.metricas(), lightning: saldosLightning() });
+
   // --- REST ---
   app.get('/api/metrics', (_req, res) => {
-    res.json(ledger.metricas());
+    res.json(payload());
   });
 
   app.get('/api/state', (_req, res) => {
@@ -68,12 +72,12 @@ export function criarServidor(
   const wss = new WebSocketServer({ server, path: '/ws' });
 
   wss.on('connection', (ws) => {
-    ws.send(JSON.stringify({ type: 'metrics', data: ledger.metricas() }));
+    ws.send(JSON.stringify({ type: 'metrics', data: payload() }));
   });
 
   function broadcast() {
     if (wss.clients.size === 0) return;
-    const msg = JSON.stringify({ type: 'metrics', data: ledger.metricas() });
+    const msg = JSON.stringify({ type: 'metrics', data: payload() });
     for (const client of wss.clients) {
       if (client.readyState === WebSocket.OPEN) client.send(msg);
     }

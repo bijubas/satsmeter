@@ -59,6 +59,7 @@ export class Ledger {
         saldoSats: config.saldoInicial,
         releLigado: true,
         semSaldoConsecutivo: 0,
+        falhasPagamento: 0,
         ultimaLeitura: 0,
         whAcumulado: 0,
         satsPagos: 0,
@@ -68,6 +69,8 @@ export class Ledger {
       };
       this.data.casas[casaId] = c;
     }
+    // ledger gravado antes do corte por pagamento não traz o contador
+    if (!Number.isFinite(c.falhasPagamento)) c.falhasPagamento = 0;
     return c;
   }
 
@@ -147,7 +150,7 @@ export class Ledger {
       liqPorMin: ultMin,
       casasAtivas: ativas,
       serie: this.serieTemporal(),
-      eventos: eventos.slice(-30).reverse(), // mais recentes primeiro
+      eventos: eventos.slice(-config.eventosPainel).reverse(), // mais recentes primeiro
       casas,
     };
   }

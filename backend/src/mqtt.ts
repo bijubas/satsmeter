@@ -43,11 +43,17 @@ export function iniciarMqtt(meter: Meter, onStatus: (online: boolean) => void): 
       }
       const casaId = (l.casaId && String(l.casaId)) || config.deviceId;
       const watts = (Number(l.tensao_v) || 0) * (Number(l.corrente_a) || 0); // P = V·I
-      const energiaKwh = Number(l.energia_kwh);
-      if (!Number.isFinite(energiaKwh)) return;
+      const energiaBruta = Number(l.energia_kwh);
+      if (!Number.isFinite(energiaBruta)) return;
+      // Escala de demo: só para o firmware single-device (que não manda casaId).
+      // Existe para tornar visível a carga real de bancada, na casa dos mWh; o
+      // simulador já publica potências realistas e não deve ser amplificado.
+      const escala = l.casaId ? 1 : config.escalaEnergia;
+      const energiaKwh = energiaBruta * escala;
       const ts = Number(l.ts) || Date.now();
-      const tag = `${casaId}|${l.data_hora ?? energiaKwh}`;
-      meter.processarEnergiaAcumulada(casaId, energiaKwh, watts, ts, tag);
+      // tag sobre o valor BRUTO: idempotência não pode depender da escala
+      const tag = `${casaId}|${l.data_hora ?? energiaBruta}`;
+      meter.processarEnergiaAcumulada(casaId, energiaKwh, watts * escala, ts, tag);
     } else if (topic === config.topicRecarga) {
       // aceita número puro ou JSON {casaId?, sats}
       let casaId = config.deviceId;

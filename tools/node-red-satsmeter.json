@@ -1,0 +1,400 @@
+[
+  {
+    "id": "satsmeter-flow",
+    "type": "tab",
+    "label": "SatsMeter",
+    "disabled": false,
+    "info": "# SatsMeter — fluxo Node-RED\n\nConsome o mesmo contrato MQTT do firmware ESP32 e do backend.\n\n## Antes de usar\n\n1. Abra o nó de configuração do broker **SatsMeter broker** e preencha\n   usuário e senha (as credenciais NÃO acompanham este arquivo).\n2. Confira host e porta. O padrão aponta para o HiveMQ Cloud com TLS (8883).\n   Para o Mosquitto local do docker-compose: host `localhost`, porta `1883`,\n   e desmarque *Enable secure (SSL/TLS) connection*.\n3. O nó **KPIs do backend** faz GET em `http://localhost:8000/api/metrics`.\n   Ajuste a URL se o backend estiver noutro host.\n\n## Tópicos\n\n| Tópico | Direção | Payload |\n|---|---|---|\n| `satsmeter/leituras` | ESP32 → | `{data_hora, tensao_v, corrente_a, energia_kwh}` |\n| `satsmeter/comandos` | → ESP32 | `1` liga / `0` corta (retained) |\n| `satsmeter/recarga` | → backend | `{casaId, sats}` |\n\n`energia_kwh` é acumulada desde o boot — a função *Normaliza leitura*\ncalcula o delta entre leituras e o guarda em `flow`.\n\n## Aviso\n\nPublicar em `satsmeter/comandos` aciona o relé físico. Os injects de\nliga/corta usam retain, igual ao backend, para o ESP32 recuperar o\nestado ao reconectar.",
+    "env": []
+  },
+  {
+    "id": "satsmeter-broker",
+    "type": "mqtt-broker",
+    "name": "SatsMeter broker",
+    "broker": "ac70a5c501fd400da48ea4a2abde61d0.s1.eu.hivemq.cloud",
+    "port": "8883",
+    "clientid": "node-red-satsmeter",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "cmt-1",
+    "type": "comment",
+    "z": "satsmeter-flow",
+    "name": "LEIA-ME — preencha as credenciais do broker antes de ativar",
+    "info": "# SatsMeter — fluxo Node-RED\n\nConsome o mesmo contrato MQTT do firmware ESP32 e do backend.\n\n## Antes de usar\n\n1. Abra o nó de configuração do broker **SatsMeter broker** e preencha\n   usuário e senha (as credenciais NÃO acompanham este arquivo).\n2. Confira host e porta. O padrão aponta para o HiveMQ Cloud com TLS (8883).\n   Para o Mosquitto local do docker-compose: host `localhost`, porta `1883`,\n   e desmarque *Enable secure (SSL/TLS) connection*.\n3. O nó **KPIs do backend** faz GET em `http://localhost:8000/api/metrics`.\n   Ajuste a URL se o backend estiver noutro host.\n\n## Tópicos\n\n| Tópico | Direção | Payload |\n|---|---|---|\n| `satsmeter/leituras` | ESP32 → | `{data_hora, tensao_v, corrente_a, energia_kwh}` |\n| `satsmeter/comandos` | → ESP32 | `1` liga / `0` corta (retained) |\n| `satsmeter/recarga` | → backend | `{casaId, sats}` |\n\n`energia_kwh` é acumulada desde o boot — a função *Normaliza leitura*\ncalcula o delta entre leituras e o guarda em `flow`.\n\n## Aviso\n\nPublicar em `satsmeter/comandos` aciona o relé físico. Os injects de\nliga/corta usam retain, igual ao backend, para o ESP32 recuperar o\nestado ao reconectar.",
+    "x": 300,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "cmt-2",
+    "type": "comment",
+    "z": "satsmeter-flow",
+    "name": "── Entrada: leituras do medidor ──",
+    "info": "",
+    "x": 220,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "cmt-3",
+    "type": "comment",
+    "z": "satsmeter-flow",
+    "name": "── Estado do relé (eco dos comandos) ──",
+    "info": "",
+    "x": 240,
+    "y": 240,
+    "wires": []
+  },
+  {
+    "id": "cmt-4",
+    "type": "comment",
+    "z": "satsmeter-flow",
+    "name": "── Ações: recarga e relé ──",
+    "info": "",
+    "x": 200,
+    "y": 360,
+    "wires": []
+  },
+  {
+    "id": "cmt-5",
+    "type": "comment",
+    "z": "satsmeter-flow",
+    "name": "── KPIs do backend (REST) ──",
+    "info": "",
+    "x": 210,
+    "y": 580,
+    "wires": []
+  },
+  {
+    "id": "in-leituras",
+    "type": "mqtt in",
+    "z": "satsmeter-flow",
+    "name": "satsmeter/leituras",
+    "topic": "satsmeter/leituras",
+    "qos": "0",
+    "datatype": "json",
+    "broker": "satsmeter-broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 150,
+    "wires": [
+      [
+        "fn-leitura"
+      ]
+    ]
+  },
+  {
+    "id": "fn-leitura",
+    "type": "function",
+    "z": "satsmeter-flow",
+    "name": "Normaliza leitura",
+    "func": "// Normaliza a leitura do ESP32 e calcula a potência instantânea (P = V·I).\nconst l = msg.payload || {};\nconst tensao = Number(l.tensao_v) || 0;\nconst corrente = Number(l.corrente_a) || 0;\nconst kwh = Number(l.energia_kwh) || 0;\n\nmsg.payload = {\n    casaId: l.casaId || 'device-01',\n    data_hora: l.data_hora || null,\n    tensao_v: tensao,\n    corrente_a: corrente,\n    potencia_w: Number((tensao * corrente).toFixed(4)),\n    energia_kwh: kwh,\n    energia_wh: Number((kwh * 1000).toFixed(4)),\n};\n\n// energia_kwh é ACUMULADA desde o boot; o delta entre leituras é o consumo.\nconst ant = flow.get('ultimoKwh_' + msg.payload.casaId);\nmsg.payload.delta_wh = (typeof ant === 'number' && kwh >= ant)\n    ? Number(((kwh - ant) * 1000).toFixed(4))\n    : 0;\nflow.set('ultimoKwh_' + msg.payload.casaId, kwh);\n\nnode.status({ fill: 'green', shape: 'dot',\n    text: msg.payload.potencia_w + ' W · ' + msg.payload.energia_wh + ' Wh' });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 150,
+    "wires": [
+      [
+        "dbg-leitura"
+      ]
+    ]
+  },
+  {
+    "id": "dbg-leitura",
+    "type": "debug",
+    "z": "satsmeter-flow",
+    "name": "leitura",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload.potencia_w",
+    "statusType": "msg",
+    "x": 610,
+    "y": 150,
+    "wires": []
+  },
+  {
+    "id": "in-comandos",
+    "type": "mqtt in",
+    "z": "satsmeter-flow",
+    "name": "satsmeter/comandos",
+    "topic": "satsmeter/comandos",
+    "qos": "0",
+    "datatype": "auto-detect",
+    "broker": "satsmeter-broker",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 290,
+    "wires": [
+      [
+        "fn-rele"
+      ]
+    ]
+  },
+  {
+    "id": "fn-rele",
+    "type": "function",
+    "z": "satsmeter-flow",
+    "name": "Estado do relé",
+    "func": "// Contrato do firmware em satsmeter/comandos: '1' liga o relé, '0' corta.\nconst v = String(msg.payload).trim();\nconst ligado = v === '1';\nmsg.payload = { comando: v, releLigado: ligado, ts: Date.now() };\nnode.status({ fill: ligado ? 'green' : 'red', shape: 'dot',\n    text: ligado ? 'relé ligado' : 'relé cortado' });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 290,
+    "wires": [
+      [
+        "dbg-rele"
+      ]
+    ]
+  },
+  {
+    "id": "dbg-rele",
+    "type": "debug",
+    "z": "satsmeter-flow",
+    "name": "relé",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload.releLigado",
+    "statusType": "msg",
+    "x": 610,
+    "y": 290,
+    "wires": []
+  },
+  {
+    "id": "inj-recarga",
+    "type": "inject",
+    "z": "satsmeter-flow",
+    "name": "Recarga 500 sats",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "{\"casaId\":\"device-01\",\"sats\":500}",
+    "payloadType": "json",
+    "x": 170,
+    "y": 410,
+    "wires": [
+      [
+        "out-recarga"
+      ]
+    ]
+  },
+  {
+    "id": "out-recarga",
+    "type": "mqtt out",
+    "z": "satsmeter-flow",
+    "name": "satsmeter/recarga",
+    "topic": "satsmeter/recarga",
+    "qos": "0",
+    "retain": "false",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "satsmeter-broker",
+    "x": 430,
+    "y": 410,
+    "wires": []
+  },
+  {
+    "id": "inj-liga",
+    "type": "inject",
+    "z": "satsmeter-flow",
+    "name": "Liga relé (1)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "1",
+    "payloadType": "str",
+    "x": 160,
+    "y": 460,
+    "wires": [
+      [
+        "out-comando"
+      ]
+    ]
+  },
+  {
+    "id": "inj-corta",
+    "type": "inject",
+    "z": "satsmeter-flow",
+    "name": "Corta relé (0)",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "0",
+    "payloadType": "str",
+    "x": 160,
+    "y": 510,
+    "wires": [
+      [
+        "out-comando"
+      ]
+    ]
+  },
+  {
+    "id": "out-comando",
+    "type": "mqtt out",
+    "z": "satsmeter-flow",
+    "name": "satsmeter/comandos (retain)",
+    "topic": "satsmeter/comandos",
+    "qos": "0",
+    "retain": "true",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "satsmeter-broker",
+    "x": 450,
+    "y": 485,
+    "wires": []
+  },
+  {
+    "id": "inj-kpis",
+    "type": "inject",
+    "z": "satsmeter-flow",
+    "name": "a cada 5s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 630,
+    "wires": [
+      [
+        "http-metrics"
+      ]
+    ]
+  },
+  {
+    "id": "http-metrics",
+    "type": "http request",
+    "z": "satsmeter-flow",
+    "name": "GET /api/metrics",
+    "method": "GET",
+    "ret": "obj",
+    "paytoqs": "ignore",
+    "url": "http://localhost:8000/api/metrics",
+    "tls": "",
+    "persist": false,
+    "proxy": "",
+    "insecureHTTPParser": false,
+    "authType": "",
+    "senderr": false,
+    "headers": [],
+    "x": 370,
+    "y": 630,
+    "wires": [
+      [
+        "fn-kpis"
+      ]
+    ]
+  },
+  {
+    "id": "fn-kpis",
+    "type": "function",
+    "z": "satsmeter-flow",
+    "name": "KPIs do backend",
+    "func": "// Achata /api/metrics nos números que interessam ao painel.\nconst m = msg.payload || {};\nconst casa = (m.casas || [])[0] || {};\nmsg.payload = {\n    liquidacoes: m.liqTotal,\n    satsAoProdutor: m.satsTotal,\n    energiaKwh: m.energiaKwh,\n    cortes: m.cortes,\n    religas: m.religas,\n    casasAtivas: m.casasAtivas,\n    casaId: casa.casaId,\n    saldoSats: casa.saldoSats,\n    releLigado: casa.releLigado,\n    falhasPagamento: casa.falhasPagamento,\n};\nnode.status({ fill: 'blue', shape: 'dot',\n    text: msg.payload.liquidacoes + ' liq · ' + Math.round(msg.payload.saldoSats || 0) + ' sats' });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 590,
+    "y": 630,
+    "wires": [
+      [
+        "dbg-kpis"
+      ]
+    ]
+  },
+  {
+    "id": "dbg-kpis",
+    "type": "debug",
+    "z": "satsmeter-flow",
+    "name": "kpis",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": true,
+    "complete": "payload",
+    "targetType": "msg",
+    "statusVal": "payload.saldoSats",
+    "statusType": "msg",
+    "x": 810,
+    "y": 630,
+    "wires": []
+  }
+]

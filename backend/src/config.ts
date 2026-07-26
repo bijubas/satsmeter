@@ -44,10 +44,29 @@ export const config = {
   saldoMinimoReliga: num('SALDO_MINIMO_RELIGA', 50),
   saldoInicial: num('SALDO_INICIAL', 20000), // saldo pré-pago inicial por casa (sats)
   whPorLiq: num('WH_POR_LIQ', 1),         // energia por microliquidação (Wh) -> 1 evento no extrato
+  // Amplifica a energia lida do medidor antes de contabilizar (1 = valor real do
+  // hardware). Só para demo: com carga baixa o consumo real fica ilegível no painel.
+  escalaEnergia: num('ESCALA_ENERGIA', 1),
+  // Eventos enviados ao painel a cada push. Sobe o histórico rolável do extrato ao
+  // custo do tamanho do payload (o broadcast é 1x/s). Teto real: MAX_EVENTOS do ledger.
+  eventosPainel: num('EVENTOS_PAINEL', 200),
 
   // --- Lightning (LNbits) ---
   lnbitsUrl: str('LNBITS_URL', ''),        // vazio => modo simulado
   lnbitsInvoiceKey: str('LNBITS_INVOICE_KEY', ''),
+  // Liquidação REAL entre carteiras (o saldo se move de fato). Com as duas
+  // preenchidas, o backend gera a invoice no produtor e paga pelo consumidor.
+  // Faltando qualquer uma, cai no MVP que só registra a invoice como prova.
+  lnbitsAdminKey: str('LNBITS_ADMIN_KEY', ''),                     // consumidor (paga)
+  lnbitsProdutorInvoiceKey: str('LNBITS_PRODUTOR_INVOICE_KEY', ''), // produtor (recebe)
+  // Recarga automática da carteira do consumidor (só demo). Precisa de uma conta
+  // com privilégio de superusuário no LNbits — é ela que pode creditar saldo.
+  // Limiar 0 desliga o recurso.
+  lnbitsUsuario: str('LNBITS_USUARIO', ''),
+  lnbitsSenha: str('LNBITS_SENHA', ''),
+  lnbitsWalletConsumidor: str('LNBITS_WALLET_CONSUMIDOR', ''),
+  lnbitsRecargaLimiar: num('LNBITS_RECARGA_LIMIAR', 0),   // sats: abaixo disso, recarrega
+  lnbitsRecargaValor: num('LNBITS_RECARGA_VALOR', 0),     // sats creditados por recarga
 
   // --- Persistência ---
   ledgerFile: path.resolve(__dirname, '..', str('LEDGER_FILE', 'ledger.json')),

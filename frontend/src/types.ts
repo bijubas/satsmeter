@@ -21,6 +21,18 @@ export interface CasaEstado {
   saldoSats: number;
   releLigado: boolean;
   ultimaLeitura: number;
+  satsPagos: number;
+  whAcumulado: number;
+  /** recusas de pagamento consecutivas; ausente em ledger antigo */
+  falhasPagamento?: number;
+}
+
+/** Saldos das carteiras Lightning — distintos do saldo pré-pago do ledger. */
+export interface SaldosLightning {
+  produtorSats: number | null;
+  consumidorSats: number | null;
+  atualizadoEm: number;
+  online: boolean;
 }
 
 /** Métricas reais empurradas pelo backend via WebSocket. */
@@ -35,6 +47,7 @@ export interface MetricasReais {
   serie: SeriePonto[];
   eventos: Evento[];
   casas: CasaEstado[];
+  lightning?: SaldosLightning;
 }
 
 /** Premissas do pitch (5 expostas em slider no 1b). */
